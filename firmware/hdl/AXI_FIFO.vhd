@@ -29,7 +29,7 @@ entity AXI_FIFO is
          S_AXI_RDATA: out std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0);
          S_AXI_RRESP: out std_logic_vector(1 downto 0);
          S_AXI_RVALID: out std_logic;
-         S_AXI_RREADY: out std_logic);
+         S_AXI_RREADY: in std_logic);
 end AXI_FIFO;
 
 architecture synth_logic of AXI_FIFO is
@@ -54,14 +54,14 @@ architecture synth_logic of AXI_FIFO is
              S_AXI_ARREADY: out std_logic;
              S_AXI_RRESP: out std_logic_vector(1 downto 0);
              S_AXI_RVALID: out std_logic;
-             S_AXI_RREADY: out std_logic;
+             S_AXI_RREADY: in std_logic;
 
              REGISTER_WR: out std_logic_vector(C_NUM_REGISTERS - 1 downto 0);
              REGISTER_RD: out std_logic_vector(C_NUM_REGISTERS - 1 downto 0));
     end component;
 
     type slv_array is array (0 to C_NUM_REGISTERS - 1) of std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0);
-    signal registers: slv_array := (others => (others => '0'));
+    signal registers: slv_array := (X"DEADBEEF", X"BADBABE5", X"CAFEBABE", X"BADC0DED");
     signal reg_write: std_logic_vector(C_NUM_REGISTERS - 1 downto 0) := (others => '0');
     signal reg_read: std_logic_vector(C_NUM_REGISTERS - 1 downto 0) := (others => '0');
 begin
@@ -89,20 +89,14 @@ begin
                                                 S_AXI_RREADY => S_AXI_RREADY,
                                                 REGISTER_WR => reg_write,
                                                 REGISTER_RD => reg_read);
-
-    read_reg_proc: process(S_AXI_ACLK) is
+    
+    read_reg_proc: process(reg_read) is
     begin
-        if(rising_edge(S_AXI_ACLK)) then
-            if(S_AXI_ARESETN = '0') then
-                S_AXI_RDATA <= (others => '0');
-            else
-                for idx in 0 to C_NUM_REGISTERS - 1 loop
-                    if(reg_read(idx) = '1') then
-                        S_AXI_RDATA <= registers(idx);
-                    end if;
-                end loop;
+        for idx in 0 to C_NUM_REGISTERS - 1 loop
+            if(reg_read(idx) = '1') then
+                S_AXI_RDATA <= registers(idx);
             end if;
-        end if;
+        end loop;
     end process;
 
 end synth_logic;

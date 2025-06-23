@@ -24,7 +24,7 @@ entity axi4_lite_slave_if is
          S_AXI_ARREADY: out std_logic;
          S_AXI_RRESP: out std_logic_vector(1 downto 0);
          S_AXI_RVALID: out std_logic;
-         S_AXI_RREADY: out std_logic;
+         S_AXI_RREADY: in std_logic;
 
          REGISTER_WR: out std_logic_vector(C_NUM_REGISTERS - 1 downto 0);
          REGISTER_RD: out std_logic_vector(C_NUM_REGISTERS - 1 downto 0));
@@ -38,14 +38,14 @@ architecture synth_logic of axi4_lite_slave_if is
     constant EXOKAY: std_logic_vector(1 downto 0) := "01";
     constant SLVERR: std_logic_vector(1 downto 0) := "10";
     constant DECERR: std_logic_vector(1 downto 0) := "11";
-    constant ADDR_LSB: integer := (C_AXI_ADDRESS_WIDTH / 32) + 1;
+    constant ADDR_LSB: integer := (C_AXI_DATA_WIDTH / 32) + 1;
 
     signal read_cstate: read_statemachine_type := IDLE;
     signal axi_arready: std_logic := '0';
     signal axi_rresp: std_logic_vector(S_AXI_RRESP'range) := OKAY;
     signal axi_rvalid: std_logic := '0';
 
-    signal read_wire: std_logic := '0';
+    alias read_strobe: std_logic is axi_arready;
     signal read_address: unsigned(integer(ceil(log2(real(C_NUM_REGISTERS)))) - 1 downto 0) := (others => '0');
     
 begin
@@ -58,14 +58,15 @@ begin
         if(rising_edge(S_AXI_ACLK)) then
             if(S_AXI_ARESETN = '0') then
                 axi_arready <= '0';
-                read_wire <= '0';
+                axi_rvalid <= '0';
                 read_address <= (others => '0');
                 read_cstate <= IDLE;
+                axi_rresp <= OKAY;
             else
                 case read_cstate is
                     when IDLE =>
                         axi_rvalid <= '0';
-                        axi_rvalid <= '0';
+                        axi_rresp <= OKAY;
                         if(S_AXI_ARVALID = '1') then
                             read_cstate <= ADDRESS_LATCH;
                         else
@@ -73,7 +74,6 @@ begin
                         end if;
                     when ADDRESS_LATCH =>
                         axi_arready <= '1';
-                        read_wire <= '1';
                         read_address <= unsigned(S_AXI_ARADDR(C_AXI_ADDRESS_WIDTH - 1 downto ADDR_LSB));
                         if(read_address < C_NUM_REGISTERS) then
                             read_cstate <= DATA_OUT;
@@ -82,7 +82,6 @@ begin
                         end if;
                     when DATA_OUT =>
                         axi_arready <= '0';
-                        read_wire <= '0';
                         axi_rvalid <= '1';
                         if(S_AXI_RREADY = '1') then
                             read_cstate <= IDLE;
@@ -109,7 +108,7 @@ begin
     begin
         if(rising_edge(S_AXI_ACLK)) then
             REGISTER_RD <= (others => '0');
-            if(read_wire = '1') then
+            if(read_strobe = '1') then
                 for idx in 0 to C_NUM_REGISTERS - 1 loop
                     if(idx = to_integer(read_address)) then
                         REGISTER_RD(idx) <= '1';

@@ -108,6 +108,7 @@ begin
     read_strobe_proc: process(S_AXI_ACLK) is
     begin
         if(rising_edge(S_AXI_ACLK)) then
+            REGISTER_RD <= (others => '0');
             if(read_wire = '1') then
                 for idx in 0 to C_NUM_REGISTERS - 1 loop
                     if(idx = to_integer(read_address)) then

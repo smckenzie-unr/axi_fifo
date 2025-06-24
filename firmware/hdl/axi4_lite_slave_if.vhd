@@ -32,7 +32,7 @@ end axi4_lite_slave_if;
 
 architecture synth_logic of axi4_lite_slave_if is
     type read_statemachine_type is (IDLE, ADDRESS_LATCH, DATA_OUT, ERROR_NOTIFY);
-    type write_statemachine_type is (IDLE, ADDRESS_LATCH, DATA_IN, RESP_OUT, ERROR_NOTIFY);
+    type write_statemachine_type is (IDLE, ADDRESS_LATCH, DATA_IN, RESPONSE_OUT, ERROR_NOTIFY);
 
     constant OKAY: std_logic_vector(1 downto 0) := "00";
     constant EXOKAY: std_logic_vector(1 downto 0) := "01";
@@ -43,15 +43,27 @@ architecture synth_logic of axi4_lite_slave_if is
     signal read_cstate: read_statemachine_type := IDLE;
     signal axi_arready: std_logic := '0';
     signal axi_rresp: std_logic_vector(S_AXI_RRESP'range) := OKAY;
-    signal axi_rvalid: std_logic := '0';
-
-    alias read_strobe: std_logic is axi_arready;
+    signal axi_rvalid: std_logic := '0';    
     signal read_address: unsigned(integer(ceil(log2(real(C_NUM_REGISTERS)))) - 1 downto 0) := (others => '0');
-    
+    alias read_strobe: std_logic is axi_arready;
+
+    signal write_cstate: write_statemachine_type := IDLE;
+    signal axi_awready: std_logic := '0';
+    signal axi_wready: std_logic := '0';
+    signal axi_bvalid: std_logic := '0';
+    signal axi_bresp: std_logic_vector(S_AXI_BRESP'range) := OKAY;
+    signal write_address: unsigned(integer(ceil(log2(real(C_NUM_REGISTERS)))) - 1 downto 0) := (others => '0');
+    alias write_strobe: std_logic is axi_awready;
+
 begin
     S_AXI_ARREADY <= axi_arready;
     S_AXI_RRESP <= axi_rresp;
     S_AXI_RVALID <= axi_rvalid;
+
+    S_AXI_AWREADY <= axi_awready;
+    S_AXI_WREADY <= axi_wready;
+    S_AXI_BVALID <= axi_bvalid;
+    S_AXI_BRESP <= axi_bresp;
 
     read_process: process(S_AXI_ACLK) is
     begin
@@ -104,6 +116,67 @@ begin
         end if;
     end process read_process;
 
+    write_process: process(S_AXI_ACLK) is
+    begin
+        if(rising_edge(S_AXI_ACLK)) then
+            if(S_AXI_ARESETN = '0') then
+                write_cstate <= IDLE;
+                axi_awready <= '0';
+                axi_wready <= '0';
+                axi_bvalid <= '0';
+                axi_bresp <= OKAY;
+                write_address <= (others => '0');
+            else
+                case write_cstate is
+                    when IDLE => 
+                        axi_bvalid <= '0';
+                        axi_bresp <= OKAY;
+                        if(S_AXI_AWVALID = '1') then
+                            write_cstate <= ADDRESS_LATCH;
+                        else
+                            write_cstate <= IDLE;
+                        end if;
+                    when ADDRESS_LATCH =>
+                        axi_awready <= '1';
+                        write_address <= unsigned(S_AXI_AWADDR(C_AXI_ADDRESS_WIDTH - 1 downto ADDR_LSB));
+                        if(write_address < C_NUM_REGISTERS) then
+                            write_cstate <= DATA_IN;
+                        else
+                            write_cstate <= ERROR_NOTIFY;
+                        end if;
+                    when DATA_IN =>
+                        axi_awready <= '0';
+                        axi_wready <= '1';
+                        if(S_AXI_WVALID = '1') then
+	                        write_cstate <= RESPONSE_OUT;
+                        else
+                            write_cstate <= DATA_IN;
+                        end if;    
+                    when RESPONSE_OUT =>
+                        axi_wready <= '0';
+                        axi_bvalid <= '1';
+                        axi_bresp <= OKAY;
+                        if(S_AXI_BREADY = '1') then
+                            write_cstate <= IDLE;
+                        else
+                            write_cstate <= RESPONSE_OUT;
+                        end if;
+                    when ERROR_NOTIFY =>
+                        axi_awready <= '0';
+                        axi_bvalid <= '1';
+                        axi_bresp <= DECERR;
+                        if(S_AXI_BREADY = '1') then
+                            write_cstate <= IDLE;
+                        else
+                            write_cstate <= ERROR_NOTIFY;
+                        end if;
+                    when others =>
+                        null;
+                end case;
+            end if;
+        end if;
+    end process write_process;
+
     read_strobe_proc: process(S_AXI_ACLK) is
     begin
         if(rising_edge(S_AXI_ACLK)) then
@@ -117,5 +190,19 @@ begin
             end if;
         end if;
     end process read_strobe_proc;
+
+    write_strobe_proc: process(S_AXI_ACLK) is
+    begin
+        if(rising_edge(S_AXI_ACLK)) then
+            REGISTER_WR <= (others => '0');
+            if(write_strobe = '1') then
+                for idx in 0 to C_NUM_REGISTERS - 1 loop
+                    if(idx = to_integer(read_address)) then
+                        REGISTER_WR(idx) <= '1';
+                    end if;
+                end loop;
+            end if;
+        end if;
+    end process write_strobe_proc;
 
 end synth_logic;

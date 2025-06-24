@@ -10,7 +10,7 @@ end axi_testbench;
 
 architecture behavioral of axi_testbench is
     signal S_AXI_ACLK: std_logic := '0';
-    signal S_AXI_ARESETN: std_logic := '0';
+    signal S_AXI_ARESETN: std_logic := '1';
     signal S_AXI_AWADDR: std_logic_vector(C_AXI_ADDRESS_WIDTH - 1 downto 0) := (others => '0');
     signal S_AXI_AWPROT: std_logic_vector(2 downto 0) := (others => '0');
     signal S_AXI_AWVALID: std_logic := '0';
@@ -142,11 +142,32 @@ begin
     --     end loop;
     -- end process stimulus_proc;
 
-    S_AXI_ARVALID <= '1' after 1.204 us,
-                     '0' after 1.220 us;
-    S_AXI_ARADDR <= X"C" after 1.204 us,
-                    X"0" after 1.220 us;
-    S_AXI_RREADY <= '1' after 1.228 us,
-                    '0' after 1.236 us;
+    -- S_AXI_ARVALID <= '1' after 1.204 us,
+    --                  '0' after 1.220 us;
+    -- S_AXI_ARADDR <= X"C" after 1.204 us,
+    --                 X"0" after 1.220 us;
+    -- S_AXI_RREADY <= '1' after 1.228 us,
+    --                 '0' after 1.236 us;
+
+
+    S_AXI_ARESETN <= '0' after 1 us;
+    S_AXI_AWVALID <= '1' after 1.100 us,
+                     '0' after 1.116 us;
+    S_AXI_AWADDR <= X"4" after 1.100 us,
+                    X"0" after 1.116 us;
+    S_AXI_WSTRB <= "1111" after 1.110 us,
+                   "0000" after 1.120 us;
+    S_AXI_WDATA <= X"DEADBEEF" after 1.108 us,
+                   X"00000000" after 1.132 us;
+    S_AXI_WVALID <= '1' after 1.116 us,
+                    '0' after 1.132 us;
+    S_AXI_BREADY <= '1' after 1.125 us,
+                    '0' after 1.130 us;
+    S_AXI_ARVALID <= '1' after 1.200 us,
+                     '0' after 1.210 us;
+    S_AXI_ARADDR <= X"4" after 1.200 us,
+                    X"0" after 1.210 us;
+    S_AXI_RREADY <= '1' after 1.215 us,
+                    '0' after 1.220 us;
 
 end behavioral;

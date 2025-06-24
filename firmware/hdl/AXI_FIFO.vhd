@@ -61,7 +61,7 @@ architecture synth_logic of AXI_FIFO is
     end component;
 
     type slv_array is array (0 to C_NUM_REGISTERS - 1) of std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0);
-    signal registers: slv_array := (X"DEADBEEF", X"BADBABE5", X"CAFEBABE", X"BADC0DED");
+    signal registers: slv_array := (others => (others => '0'));
     signal reg_write: std_logic_vector(C_NUM_REGISTERS - 1 downto 0) := (others => '0');
     signal reg_read: std_logic_vector(C_NUM_REGISTERS - 1 downto 0) := (others => '0');
 begin
@@ -97,6 +97,19 @@ begin
                 S_AXI_RDATA <= registers(idx);
             end if;
         end loop;
-    end process;
+    end process read_reg_proc;
+
+    write_reg_proc: process(reg_read) is
+    begin
+        for idx in 0 to C_NUM_REGISTERS - 1 loop
+            if(reg_write(idx) = '1') then
+                for byte_index in 0 to ((C_AXI_DATA_WIDTH / 8) - 1) loop
+                    if(S_AXI_WSTRB(byte_index) = '1') then
+                        registers(idx)(byte_index * 8 + 7 downto byte_index * 8) <= S_AXI_WDATA(byte_index * 8 + 7 downto byte_index * 8);
+                    end if;
+                end loop;
+            end if;
+        end loop;
+    end process write_reg_proc;
 
 end synth_logic;

@@ -99,7 +99,7 @@ begin
         end loop;
     end process read_reg_proc;
 
-    write_reg_proc: process(reg_read) is
+    write_reg_proc: process(reg_write) is
     begin
         for idx in 0 to C_NUM_REGISTERS - 1 loop
             if(reg_write(idx) = '1') then

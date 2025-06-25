@@ -32,7 +32,7 @@ end axi4_lite_slave_if;
 
 architecture synth_logic of axi4_lite_slave_if is
     type read_statemachine_type is (IDLE, ADDRESS_LATCH, DATA_OUT, ERROR_NOTIFY);
-    type write_statemachine_type is (IDLE, ADDRESS_LATCH, DATA_IN, RESPONSE_OUT, ERROR_NOTIFY);
+    type write_statemachine_type is (IDLE, ADDRESS_LATCH, WAIT_FOR_VALID, DATA_IN, RESPONSE_OUT, ERROR_NOTIFY);
 
     constant OKAY: std_logic_vector(1 downto 0) := "00";
     constant EXOKAY: std_logic_vector(1 downto 0) := "01";
@@ -140,18 +140,20 @@ begin
                         axi_awready <= '1';
                         write_address <= unsigned(S_AXI_AWADDR(C_AXI_ADDRESS_WIDTH - 1 downto ADDR_LSB));
                         if(write_address < C_NUM_REGISTERS) then
-                            write_cstate <= DATA_IN;
+                            write_cstate <= WAIT_FOR_VALID;
                         else
                             write_cstate <= ERROR_NOTIFY;
                         end if;
-                    when DATA_IN =>
+                    when WAIT_FOR_VALID =>
                         axi_awready <= '0';
-                        axi_wready <= '1';
                         if(S_AXI_WVALID = '1') then
-	                        write_cstate <= RESPONSE_OUT;
+	                        write_cstate <= DATA_IN;
                         else
-                            write_cstate <= DATA_IN;
+                            write_cstate <= ADDRESS_LATCH;
                         end if;    
+                    when DATA_IN =>
+                        axi_wready <= '1';
+                        write_cstate <= RESPONSE_OUT;
                     when RESPONSE_OUT =>
                         axi_wready <= '0';
                         axi_bvalid <= '1';
@@ -197,7 +199,7 @@ begin
             REGISTER_WR <= (others => '0');
             if(write_strobe = '1') then
                 for idx in 0 to C_NUM_REGISTERS - 1 loop
-                    if(idx = to_integer(read_address)) then
+                    if(idx = to_integer(write_address)) then
                         REGISTER_WR(idx) <= '1';
                     end if;
                 end loop;

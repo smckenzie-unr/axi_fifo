@@ -3,9 +3,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity axi_testbench is
-    generic(C_AXI_ADDRESS_WIDTH: integer range 1 to 128 := 4;
+    generic(C_AXI_ADDRESS_WIDTH: integer range 1 to 128 := 10;
             C_AXI_DATA_WIDTH: integer range 32 to 128 := 32;
-            C_NUM_REGISTERS: integer range 1 to 1024 := 4);
+            C_NUM_REGISTERS: integer range 1 to 1024 := 256);
 end axi_testbench;
 
 architecture behavioral of axi_testbench is
@@ -152,11 +152,11 @@ begin
 
     S_AXI_AWVALID <= '1' after 1.100 us,
                      '0' after 1.116 us;
-    S_AXI_AWADDR <= X"4" after 1.100 us,
-                    X"0" after 1.116 us;
-    S_AXI_WSTRB <= "1010"; -- after 1.110 us,
+    S_AXI_AWADDR <= "0000000100" after 1.100 us,
+                    "0000000000" after 1.116 us;
+    S_AXI_WSTRB <= "1111"; -- after 1.110 us,
                    --"0000" after 1.120 us;
-    S_AXI_WDATA <= X"DEADBEEF" after 1.108 us,
+    S_AXI_WDATA <= X"BADBABE5" after 1.108 us,
                    X"00000000" after 1.132 us;
     S_AXI_WVALID <= '1' after 1.116 us,
                     '0' after 1.132 us;
@@ -164,8 +164,8 @@ begin
                     '0' after 1.148 us;
     S_AXI_ARVALID <= '1' after 1.204 us,
                      '0' after 1.220 us;
-    S_AXI_ARADDR <= X"4" after 1.204 us,
-                    X"0" after 1.220 us;
+    S_AXI_ARADDR <= "0000000100" after 1.204 us,
+                    "0000000000" after 1.220 us;
     S_AXI_RREADY <= '1' after 1.228 us,
                     '0' after 1.236 us;
 

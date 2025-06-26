@@ -184,7 +184,7 @@ begin
         if(rising_edge(S_AXI_ACLK)) then
             REGISTER_RD <= (others => '0');
             if(read_strobe = '1') then
-                for idx in 0 to C_NUM_REGISTERS - 1 loop
+                for idx in REGISTER_RD'range loop
                     if(idx = to_integer(read_address)) then
                         REGISTER_RD(idx) <= '1';
                     end if;
@@ -198,7 +198,7 @@ begin
         if(rising_edge(S_AXI_ACLK)) then
             REGISTER_WR <= (others => '0');
             if(write_strobe = '1') then
-                for idx in 0 to C_NUM_REGISTERS - 1 loop
+                for idx in REGISTER_WR'range loop
                     if(idx = to_integer(write_address)) then
                         REGISTER_WR(idx) <= '1';
                     end if;

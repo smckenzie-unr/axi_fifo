@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.std_logic_misc.all;
 
 library unisim;
 use unisim.vcomponents.all;
@@ -64,6 +65,8 @@ architecture synth_logic of AXI_FIFO is
     signal registers: slv_array := (others => (others => '0'));
     signal reg_write: std_logic_vector(C_NUM_REGISTERS - 1 downto 0) := (others => '0');
     signal reg_read: std_logic_vector(C_NUM_REGISTERS - 1 downto 0) := (others => '0');
+    signal strobe_read: std_logic := '0';
+    signal strobe_write: std_logic := '0';
 begin
 
     axi_interface : axi4_lite_slave_if generic map(C_AXI_ADDRESS_WIDTH => C_AXI_ADDRESS_WIDTH,
@@ -90,26 +93,58 @@ begin
                                                 REGISTER_WR => reg_write,
                                                 REGISTER_RD => reg_read);
     
-    read_reg_proc: process(reg_read) is
+    -- read_reg_proc: process(S_AXI_ACLK) is
+    -- begin
+    --     if(rising_edge(S_AXI_ACLK)) then
+    --         for idx in reg_read'range loop
+    --             if(reg_read(idx) = '1') then
+    --                 S_AXI_RDATA <= registers(idx);
+    --             end if;
+    --         end loop;
+    --     end if;
+    -- end process read_reg_proc;
+
+    -- write_reg_proc: process(S_AXI_ACLK) is
+    -- begin
+    --     if(rising_edge(S_AXI_ACLK)) then
+    --         for idx in reg_write'range loop
+    --             if(reg_write(idx) = '1') then
+    --                 for byte_index in 0 to ((C_AXI_DATA_WIDTH / 8) - 1) loop
+    --                     if(S_AXI_WSTRB(byte_index) = '1') then
+    --                         registers(idx)(byte_index * 8 + 7 downto byte_index * 8) <= S_AXI_WDATA(byte_index * 8 + 7 downto byte_index * 8);
+    --                     end if;
+    --                 end loop;
+    --             end if;
+    --         end loop;
+    --     end if;
+    -- end process write_reg_proc;
+
+    strobe_read <= or_reduce(reg_read);
+    read_reg_proc: process(strobe_read) is
     begin
-        for idx in 0 to C_NUM_REGISTERS - 1 loop
-            if(reg_read(idx) = '1') then
-                S_AXI_RDATA <= registers(idx);
-            end if;
-        end loop;
+        if(rising_edge(strobe_read)) then
+            for idx in reg_read'range loop
+                if(reg_read(idx) = '1') then
+                    S_AXI_RDATA <= registers(idx);
+                end if;
+            end loop;
+        end if;
     end process read_reg_proc;
 
-    write_reg_proc: process(reg_write) is
+    strobe_write <= or_reduce(reg_write);
+    write_reg_proc: process(strobe_write) is
     begin
-        for idx in 0 to C_NUM_REGISTERS - 1 loop
-            if(reg_write(idx) = '1') then
-                for byte_index in 0 to ((C_AXI_DATA_WIDTH / 8) - 1) loop
-                    if(S_AXI_WSTRB(byte_index) = '1') then
-                        registers(idx)(byte_index * 8 + 7 downto byte_index * 8) <= S_AXI_WDATA(byte_index * 8 + 7 downto byte_index * 8);
-                    end if;
-                end loop;
-            end if;
-        end loop;
+        if(rising_edge(strobe_write)) then
+            for idx in reg_write'range loop
+                if(reg_write(idx) = '1') then
+                    for byte_index in 0 to ((C_AXI_DATA_WIDTH / 8) - 1) loop
+                        if(S_AXI_WSTRB(byte_index) = '1') then
+                            registers(idx)(byte_index * 8 + 7 downto byte_index * 8) <= S_AXI_WDATA(byte_index * 8 + 7 downto byte_index * 8);
+                        end if;
+                    end loop;
+                end if;
+            end loop;
+        end if;
     end process write_reg_proc;
 
 end synth_logic;

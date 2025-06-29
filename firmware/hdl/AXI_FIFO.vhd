@@ -2,17 +2,17 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.std_logic_misc.all;
+use ieee.math_real.all;
 
 library unisim;
 use unisim.vcomponents.all;
 
 entity AXI_FIFO is
-    generic(C_AXI_ADDRESS_WIDTH: integer range 1 to 128 := 4;
-            C_AXI_DATA_WIDTH: integer range 32 to 128 := 32;
+    generic(C_AXI_DATA_WIDTH: integer range 32 to 128 := 32;
             C_NUM_REGISTERS: integer range 1 to 1024 := 4);
     port(S_AXI_ACLK: in std_logic;
          S_AXI_ARESETN: in std_logic;
-         S_AXI_AWADDR: in std_logic_vector(C_AXI_ADDRESS_WIDTH - 1 downto 0);
+         S_AXI_AWADDR: in std_logic_vector(integer(ceil(log2(real(C_NUM_REGISTERS)))) + 1 downto 0);
          S_AXI_AWPROT: in std_logic_vector(2 downto 0);
          S_AXI_AWVALID: in std_logic;
          S_AXI_AWREADY: out std_logic;
@@ -23,7 +23,7 @@ entity AXI_FIFO is
          S_AXI_BRESP: out std_logic_vector(1 downto 0);
          S_AXI_BVALID: out std_logic;
          S_AXI_BREADY: in std_logic;
-         S_AXI_ARADDR: in std_logic_vector(C_AXI_ADDRESS_WIDTH - 1 downto 0);
+         S_AXI_ARADDR: in std_logic_vector(integer(ceil(log2(real(C_NUM_REGISTERS)))) + 1 downto 0);
          S_AXI_ARPROT: in std_logic_vector(2 downto 0);
          S_AXI_ARVALID: in std_logic;
          S_AXI_ARREADY: out std_logic;
@@ -35,12 +35,11 @@ end AXI_FIFO;
 
 architecture synth_logic of AXI_FIFO is
     component axi4_lite_slave_if is
-        generic(C_AXI_ADDRESS_WIDTH: integer range 1 to 128 := 4;
-                C_AXI_DATA_WIDTH: integer range 32 to 128 := 32;
+        generic(C_AXI_DATA_WIDTH: integer range 32 to 128 := 32;
                 C_NUM_REGISTERS: integer range 1 to 1024 := 4);
         port(S_AXI_ACLK: in std_logic;
              S_AXI_ARESETN: in std_logic;
-             S_AXI_AWADDR: in std_logic_vector(C_AXI_ADDRESS_WIDTH - 1 downto 0);
+             S_AXI_AWADDR: in std_logic_vector(integer(ceil(log2(real(C_NUM_REGISTERS)))) + 1 downto 0);
              S_AXI_AWPROT: in std_logic_vector(2 downto 0);
              S_AXI_AWVALID: in std_logic;
              S_AXI_AWREADY: out std_logic;
@@ -49,7 +48,7 @@ architecture synth_logic of AXI_FIFO is
              S_AXI_BRESP: out std_logic_vector(1 downto 0);
              S_AXI_BVALID: out std_logic;
              S_AXI_BREADY: in std_logic;
-             S_AXI_ARADDR: in std_logic_vector(C_AXI_ADDRESS_WIDTH - 1 downto 0);
+             S_AXI_ARADDR: in std_logic_vector(integer(ceil(log2(real(C_NUM_REGISTERS)))) + 1 downto 0);
              S_AXI_ARPROT: in std_logic_vector(2 downto 0);
              S_AXI_ARVALID: in std_logic;
              S_AXI_ARREADY: out std_logic;
@@ -72,8 +71,7 @@ architecture synth_logic of AXI_FIFO is
 ;begin
 
     S_AXI_RDATA <= axi_rdata;
-    axi_interface : axi4_lite_slave_if generic map(C_AXI_ADDRESS_WIDTH => C_AXI_ADDRESS_WIDTH,
-                                                   C_AXI_DATA_WIDTH => C_AXI_DATA_WIDTH,
+    axi_interface : axi4_lite_slave_if generic map(C_AXI_DATA_WIDTH => C_AXI_DATA_WIDTH,
                                                    C_NUM_REGISTERS => C_NUM_REGISTERS)
                                        port map(S_AXI_ACLK => S_AXI_ACLK,
                                                 S_AXI_ARESETN => S_AXI_ARESETN,

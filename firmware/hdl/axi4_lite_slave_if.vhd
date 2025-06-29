@@ -4,12 +4,11 @@ use ieee.numeric_std.all;
 use ieee.math_real.all;
 
 entity axi4_lite_slave_if is
-    generic(C_AXI_ADDRESS_WIDTH: integer range 1 to 128 := 4;
-            C_AXI_DATA_WIDTH: integer range 32 to 128 := 32;
+    generic(C_AXI_DATA_WIDTH: integer range 32 to 128 := 32;
             C_NUM_REGISTERS: integer range 1 to 1024 := 4);
     port(S_AXI_ACLK: in std_logic;
          S_AXI_ARESETN: in std_logic;
-         S_AXI_AWADDR: in std_logic_vector(C_AXI_ADDRESS_WIDTH - 1 downto 0);
+         S_AXI_AWADDR: in std_logic_vector(integer(ceil(log2(real(C_NUM_REGISTERS)))) + 1 downto 0);
          S_AXI_AWPROT: in std_logic_vector(2 downto 0);
          S_AXI_AWVALID: in std_logic;
          S_AXI_AWREADY: out std_logic;
@@ -18,7 +17,7 @@ entity axi4_lite_slave_if is
          S_AXI_BRESP: out std_logic_vector(1 downto 0);
          S_AXI_BVALID: out std_logic;
          S_AXI_BREADY: in std_logic;
-         S_AXI_ARADDR: in std_logic_vector(C_AXI_ADDRESS_WIDTH - 1 downto 0);
+         S_AXI_ARADDR: in std_logic_vector(integer(ceil(log2(real(C_NUM_REGISTERS)))) + 1 downto 0);
          S_AXI_ARPROT: in std_logic_vector(2 downto 0);
          S_AXI_ARVALID: in std_logic;
          S_AXI_ARREADY: out std_logic;
@@ -64,9 +63,7 @@ begin
     S_AXI_BVALID <= axi_bvalid;
     S_AXI_BRESP <= axi_bresp;
 
-    with S_AXI_WVALID select
-        REGISTER_WR <= write_reg when '1',
-                       (others => '0') when others;
+    with S_AXI_WVALID select REGISTER_WR <= write_reg when '1', (others => '0') when others;
                        
     read_process: process(S_AXI_ACLK) is
         variable read_address: unsigned(integer(ceil(log2(real(C_NUM_REGISTERS)))) - 1 downto 0) := (others => '0');
@@ -92,13 +89,17 @@ begin
                         end if;
                     when ADDRESS_LATCH =>
                         axi_arready <= '1';
-                        read_address := unsigned(S_AXI_ARADDR(C_AXI_ADDRESS_WIDTH - 1 downto ADDR_LSB));
-                        for idx in read_reg'range loop
-                            if(idx = to_integer(read_address)) then
-                                read_reg(idx) <= '1';
-                            end if;
-                        end loop;
-                        read_cstate <= DATA_OUT;
+                        read_address := unsigned(S_AXI_ARADDR(S_AXI_ARADDR'high downto ADDR_LSB));
+                        if(read_address < to_unsigned(C_NUM_REGISTERS, read_address'length)) then
+                            for idx in read_reg'range loop
+                                if(idx = to_integer(read_address)) then
+                                    read_reg(idx) <= '1';
+                                end if;
+                            end loop;
+                            read_cstate <= DATA_OUT;
+                        else
+                            read_cstate <= ERROR_NOTIFY;
+                        end if;
                     when DATA_OUT =>
                         axi_arready <= '0';
                         axi_rvalid <= '1';
@@ -147,13 +148,17 @@ begin
                         end if;
                     when ADDRESS_LATCH =>
                         axi_awready <= '1';
-                        write_address := unsigned(S_AXI_AWADDR(C_AXI_ADDRESS_WIDTH - 1 downto ADDR_LSB));
-                        for idx in write_reg'range loop
-                            if(idx = to_integer(write_address)) then
-                                write_reg(idx) <= '1';
-                            end if;
-                        end loop;
-                        write_cstate <= WAIT_FOR_VALID;
+                        write_address := unsigned(S_AXI_AWADDR(S_AXI_AWADDR'high downto ADDR_LSB));
+                        if(write_address < to_unsigned(C_NUM_REGISTERS, write_address'length)) then
+                            for idx in write_reg'range loop
+                                if(idx = to_integer(write_address)) then
+                                    write_reg(idx) <= '1';
+                                end if;
+                            end loop;
+                            write_cstate <= WAIT_FOR_VALID;
+                        else
+                            write_cstate <= ERROR_NOTIFY;
+                        end if;
                     when WAIT_FOR_VALID =>
                         axi_awready <= '0';
                         if(S_AXI_WVALID = '1') then

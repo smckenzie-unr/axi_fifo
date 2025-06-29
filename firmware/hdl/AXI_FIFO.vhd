@@ -67,8 +67,11 @@ architecture synth_logic of AXI_FIFO is
     signal reg_read: std_logic_vector(C_NUM_REGISTERS - 1 downto 0) := (others => '0');
     signal strobe_read: std_logic := '0';
     signal strobe_write: std_logic := '0';
-begin
 
+    signal axi_rdata: std_logic_vector(S_AXI_RDATA'range) := (others => '0')
+;begin
+
+    S_AXI_RDATA <= axi_rdata;
     axi_interface : axi4_lite_slave_if generic map(C_AXI_ADDRESS_WIDTH => C_AXI_ADDRESS_WIDTH,
                                                    C_AXI_DATA_WIDTH => C_AXI_DATA_WIDTH,
                                                    C_NUM_REGISTERS => C_NUM_REGISTERS)
@@ -93,58 +96,40 @@ begin
                                                 REGISTER_WR => reg_write,
                                                 REGISTER_RD => reg_read);
     
-    -- read_reg_proc: process(S_AXI_ACLK) is
-    -- begin
-    --     if(rising_edge(S_AXI_ACLK)) then
-    --         for idx in reg_read'range loop
-    --             if(reg_read(idx) = '1') then
-    --                 S_AXI_RDATA <= registers(idx);
-    --             end if;
-    --         end loop;
-    --     end if;
-    -- end process read_reg_proc;
-
-    -- write_reg_proc: process(S_AXI_ACLK) is
-    -- begin
-    --     if(rising_edge(S_AXI_ACLK)) then
-    --         for idx in reg_write'range loop
-    --             if(reg_write(idx) = '1') then
-    --                 for byte_index in 0 to ((C_AXI_DATA_WIDTH / 8) - 1) loop
-    --                     if(S_AXI_WSTRB(byte_index) = '1') then
-    --                         registers(idx)(byte_index * 8 + 7 downto byte_index * 8) <= S_AXI_WDATA(byte_index * 8 + 7 downto byte_index * 8);
-    --                     end if;
-    --                 end loop;
-    --             end if;
-    --         end loop;
-    --     end if;
-    -- end process write_reg_proc;
-
-    strobe_read <= or_reduce(reg_read);
-    read_reg_proc: process(strobe_read) is
+    read_reg_proc: process(S_AXI_ACLK) is
     begin
-        if(rising_edge(strobe_read)) then
-            for idx in reg_read'range loop
-                if(reg_read(idx) = '1') then
-                    S_AXI_RDATA <= registers(idx);
-                end if;
-            end loop;
+        if(rising_edge(S_AXI_ACLK)) then
+            if(S_AXI_ARESETN = '0') then
+                strobe_read <= '0';
+                axi_rdata <= (others => '0');
+            else
+                strobe_read <= or_reduce(reg_read);
+                for idx in reg_read'range loop
+                    if(reg_read(idx) = '1' and strobe_read = '0') then
+                        axi_rdata <= registers(idx);
+                    end if;
+                end loop;
+            end if;
         end if;
     end process read_reg_proc;
 
-    strobe_write <= or_reduce(reg_write);
-    write_reg_proc: process(strobe_write) is
+    write_reg_proc: process(S_AXI_ACLK) is
     begin
-        if(rising_edge(strobe_write)) then
-            for idx in reg_write'range loop
-                if(reg_write(idx) = '1') then
-                    for byte_index in 0 to ((C_AXI_DATA_WIDTH / 8) - 1) loop
-                        if(S_AXI_WSTRB(byte_index) = '1') then
-                            registers(idx)(byte_index * 8 + 7 downto byte_index * 8) <= S_AXI_WDATA(byte_index * 8 + 7 downto byte_index * 8);
-                        end if;
-                    end loop;
-                end if;
-            end loop;
+        if(rising_edge(S_AXI_ACLK)) then
+            if(S_AXI_ARESETN = '0') then
+                strobe_write <= '0';
+            else
+                strobe_write <= or_reduce(reg_write);
+                for idx in reg_write'range loop
+                    if(reg_write(idx) = '1' and strobe_write = '0') then
+                        for byte_index in 0 to ((C_AXI_DATA_WIDTH / 8) - 1) loop
+                            if(S_AXI_WSTRB(byte_index) = '1') then
+                                registers(idx)(byte_index * 8 + 7 downto byte_index * 8) <= S_AXI_WDATA(byte_index * 8 + 7 downto byte_index * 8);
+                            end if;
+                        end loop;
+                    end if;
+                end loop;
+            end if;
         end if;
     end process write_reg_proc;
-
 end synth_logic;

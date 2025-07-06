@@ -53,9 +53,7 @@ architecture synth_logic of AXI_FIFO is
     signal strobe_write: std_logic := '0';
 
     signal axi_rdata: std_logic_vector(S_AXI_RDATA'range) := (others => '0');
-
-    signal din_wire: std_logic_vector(35 downto 0) := (others => '0');
-    signal dout_wire: std_logic_vector(35 downto 0) := (others => '0');
+    signal fifo_reset: std_logic := '0';
 
     alias read_cntrl_reg: std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0) is registers(READ_CONTROL_REGISTER);
     alias read_data_reg: std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0) is registers(READ_DATA_REGISTER);
@@ -67,8 +65,8 @@ architecture synth_logic of AXI_FIFO is
 begin
 
     S_AXI_RDATA <= axi_rdata;
-    din_wire <= "00" & write_data_reg;
-    read_data_reg <= dout_wire(read_data_reg'high downto 0);
+    fifo_reset <= not S_AXI_ARESETN;
+
     axi_interface: entity work.axi4_lite_slave_if generic map(C_AXI_DATA_WIDTH => C_AXI_DATA_WIDTH,
                                                               C_AXI_ADDRESS_WIDTH => C_AXI_ADDRESS_WIDTH,
                                                               C_NUM_REGISTERS => C_NUM_REGISTERS)
@@ -94,66 +92,66 @@ begin
                                                            REGISTER_RD => reg_read);
 
     FIFO18E2_inst: entity unisim.FIFO18E2 generic map (CASCADE_ORDER => "NONE",            -- FIRST, LAST, MIDDLE, NONE, PARALLEL
-                                                        CLOCK_DOMAINS => "INDEPENDENT",     -- COMMON, INDEPENDENT
-                                                        FIRST_WORD_FALL_THROUGH => "FALSE", -- FALSE, TRUE
-                                                        INIT => X"000000000",               -- Initial values on output port
-                                                        PROG_EMPTY_THRESH => 256,           -- Programmable Empty Threshold
-                                                        PROG_FULL_THRESH => 256,            -- Programmable Full Threshold
-                                                        -- Programmable Inversion Attributes: Specifies the use of the built-in programmable inversion
-                                                        IS_RDCLK_INVERTED => '0',           -- Optional inversion for RDCLK
-                                                        IS_RDEN_INVERTED => '0',            -- Optional inversion for RDEN
-                                                        IS_RSTREG_INVERTED => '0',          -- Optional inversion for RSTREG
-                                                        IS_RST_INVERTED => '0',             -- Optional inversion for RST
-                                                        IS_WRCLK_INVERTED => '0',           -- Optional inversion for WRCLK
-                                                        IS_WREN_INVERTED => '0',            -- Optional inversion for WREN
-                                                        RDCOUNT_TYPE => "RAW_PNTR",         -- EXTENDED_DATACOUNT, RAW_PNTR, SIMPLE_DATACOUNT, SYNC_PNTR
-                                                        READ_WIDTH => 4,                    -- 18-9
-                                                        REGISTER_MODE => "UNREGISTERED",    -- DO_PIPELINED, REGISTERED, UNREGISTERED
-                                                        RSTREG_PRIORITY => "RSTREG",        -- REGCE, RSTREG
-                                                        SLEEP_ASYNC => "FALSE",             -- FALSE, TRUE
-                                                        SRVAL => X"000000000",              -- SET/reset value of the FIFO outputs
-                                                        WRCOUNT_TYPE => "RAW_PNTR",         -- EXTENDED_DATACOUNT, RAW_PNTR, SIMPLE_DATACOUNT, SYNC_PNTR
-                                                        WRITE_WIDTH => 4)
-                                          port map (CASDOUT => CASDOUT,             -- 32-bit output: Data cascade output bus
-                                                    CASDOUTP => CASDOUTP,           -- 4-bit output: Parity data cascade output bus
-                                                    CASNXTEMPTY => CASNXTEMPTY,     -- 1-bit output: Cascade next empty
-                                                    CASPRVRDEN => CASPRVRDEN,       -- 1-bit output: Cascade previous read enable
+                                                       CLOCK_DOMAINS => "COMMON",     -- COMMON, INDEPENDENT
+                                                       FIRST_WORD_FALL_THROUGH => "FALSE", -- FALSE, TRUE
+                                                       INIT => X"000000000",               -- Initial values on output port
+                                                       PROG_EMPTY_THRESH => 256,           -- Programmable Empty Threshold
+                                                       PROG_FULL_THRESH => 256,            -- Programmable Full Threshold
+                                                       -- Programmable Inversion Attributes: Specifies the use of the built-in programmable inversion
+                                                       IS_RDCLK_INVERTED => '0',           -- Optional inversion for RDCLK
+                                                       IS_RDEN_INVERTED => '0',            -- Optional inversion for RDEN
+                                                       IS_RSTREG_INVERTED => '0',          -- Optional inversion for RSTREG
+                                                       IS_RST_INVERTED => '0',             -- Optional inversion for RST
+                                                       IS_WRCLK_INVERTED => '0',           -- Optional inversion for WRCLK
+                                                       IS_WREN_INVERTED => '0',            -- Optional inversion for WREN
+                                                       RDCOUNT_TYPE => "RAW_PNTR",         -- EXTENDED_DATACOUNT, RAW_PNTR, SIMPLE_DATACOUNT, SYNC_PNTR
+                                                       READ_WIDTH => 36,                    -- 18-9?????
+                                                       REGISTER_MODE => "UNREGISTERED",    -- DO_PIPELINED, REGISTERED, UNREGISTERED
+                                                       RSTREG_PRIORITY => "RSTREG",        -- REGCE, RSTREG
+                                                       SLEEP_ASYNC => "FALSE",             -- FALSE, TRUE
+                                                       SRVAL => X"000000000",              -- SET/reset value of the FIFO outputs
+                                                       WRCOUNT_TYPE => "RAW_PNTR",         -- EXTENDED_DATACOUNT, RAW_PNTR, SIMPLE_DATACOUNT, SYNC_PNTR
+                                                       WRITE_WIDTH => 36)                  -- 18-9?????  
+                                          port map (CASDOUT => open,                       -- 32-bit output: Data cascade output bus
+                                                    CASDOUTP => open,                      -- 4-bit output: Parity data cascade output bus
+                                                    CASNXTEMPTY => open,                   -- 1-bit output: Cascade next empty
+                                                    CASPRVRDEN => open,                    -- 1-bit output: Cascade previous read enable
                                                     -- Read Data outputs: Read output data
-                                                    DOUT => DOUT,                   -- 32-bit output: FIFO data output bus
-                                                    DOUTP => DOUTP,                 -- 4-bit output: FIFO parity output bus.
+                                                    DOUT => read_data_reg,                 -- 32-bit output: FIFO data output bus
+                                                    DOUTP => open,                         -- 4-bit output: FIFO parity output bus.
                                                     -- Status outputs: Flags and other FIFO status outputs
-                                                    EMPTY => EMPTY,                 -- 1-bit output: Empty
-                                                    FULL => FULL,                   -- 1-bit output: Full
-                                                    PROGEMPTY => PROGEMPTY,         -- 1-bit output: Programmable empty
-                                                    PROGFULL => PROGFULL,           -- 1-bit output: Programmable full
-                                                    RDCOUNT => RDCOUNT,             -- 13-bit output: Read count
-                                                    RDERR => RDERR,                 -- 1-bit output: Read error
-                                                    RDRSTBUSY => RDRSTBUSY,         -- 1-bit output: Reset busy (sync to RDCLK)
-                                                    WRCOUNT => WRCOUNT,             -- 13-bit output: Write count
-                                                    WRERR => WRERR,                 -- 1-bit output: Write Error
-                                                    WRRSTBUSY => WRRSTBUSY,         -- 1-bit output: Reset busy (sync to WRCLK)
+                                                    EMPTY => fifo_status_reg(0),           -- 1-bit output: Empty
+                                                    FULL => fifo_status_reg(1),            -- 1-bit output: Full
+                                                    PROGEMPTY => fifo_status_reg(2),       -- 1-bit output: Programmable empty
+                                                    PROGFULL => fifo_status_reg(3),        -- 1-bit output: Programmable full
+                                                    RDCOUNT => open,                       -- 13-bit output: Read count
+                                                    RDERR => fifo_status_reg(4),           -- 1-bit output: Read error
+                                                    RDRSTBUSY => fifo_status_reg(5),       -- 1-bit output: Reset busy (sync to RDCLK)
+                                                    WRCOUNT => open,                       -- 13-bit output: Write count
+                                                    WRERR => fifo_status_reg(6),           -- 1-bit output: Write Error
+                                                    WRRSTBUSY => fifo_status_reg(7),       -- 1-bit output: Reset busy (sync to WRCLK)
                                                     -- Cascade Signals inputs: Multi-FIFO cascade signals
-                                                    CASDIN => CASDIN,               -- 32-bit input: Data cascade input bus
-                                                    CASDINP => CASDINP,             -- 4-bit input: Parity data cascade input bus
-                                                    CASDOMUX => CASDOMUX,           -- 1-bit input: Cascade MUX select
-                                                    CASDOMUXEN => CASDOMUXEN,       -- 1-bit input: Enable for cascade MUX select
-                                                    CASNXTRDEN => CASNXTRDEN,       -- 1-bit input: Cascade next read enable
-                                                    CASOREGIMUX => CASOREGIMUX,     -- 1-bit input: Cascade output MUX select
-                                                    CASOREGIMUXEN => CASOREGIMUXEN, -- 1-bit input: Cascade output MUX select enable
-                                                    CASPRVEMPTY => CASPRVEMPTY,     -- 1-bit input: Cascade previous empty
+                                                    CASDIN => (others => '0'),             -- 32-bit input: Data cascade input bus
+                                                    CASDINP => (others => '0'),            -- 4-bit input: Parity data cascade input bus
+                                                    CASDOMUX => '0',                       -- 1-bit input: Cascade MUX select
+                                                    CASDOMUXEN => '0',                     -- 1-bit input: Enable for cascade MUX select
+                                                    CASNXTRDEN => '0',                     -- 1-bit input: Cascade next read enable
+                                                    CASOREGIMUX => '0',                    -- 1-bit input: Cascade output MUX select
+                                                    CASOREGIMUXEN => '0',                  -- 1-bit input: Cascade output MUX select enable
+                                                    CASPRVEMPTY => '0',                    -- 1-bit input: Cascade previous empty
                                                     -- Read Control Signals inputs: Read clock, enable and reset input signals
-                                                    RDCLK => RDCLK,                 -- 1-bit input: Read clock
-                                                    RDEN => RDEN,                   -- 1-bit input: Read enable
-                                                    REGCE => REGCE,                 -- 1-bit input: Output register clock enable
-                                                    RSTREG => RSTREG,               -- 1-bit input: Output register reset
-                                                    SLEEP => SLEEP,                 -- 1-bit input: Sleep Mode
+                                                    RDCLK => S_AXI_ACLK,                   -- 1-bit input: Read clock
+                                                    RDEN => read_cntrl_reg(0),             -- 1-bit input: Read enable
+                                                    REGCE => read_cntrl_reg(1),            -- 1-bit input: Output register clock enable
+                                                    RSTREG => read_cntrl_reg(2),           -- 1-bit input: Output register reset
+                                                    SLEEP => read_cntrl_reg(3),            -- 1-bit input: Sleep Mode
                                                     -- Write Control Signals inputs: Write clock and enable input signals
-                                                    RST => RST,                     -- 1-bit input: Reset
-                                                    WRCLK => WRCLK,                 -- 1-bit input: Write clock
-                                                    WREN => WREN,                   -- 1-bit input: Write enable
+                                                    RST => fifo_reset,                     -- 1-bit input: Reset
+                                                    WRCLK => S_AXI_ACLK,                   -- 1-bit input: Write clock
+                                                    WREN => write_cntrl_reg(0),            -- 1-bit input: Write enable
                                                     -- Write Data inputs: Write input data
-                                                    DIN => DIN,                     -- 32-bit input: FIFO data input bus
-                                                    DINP => DINP);
+                                                    DIN => write_data_reg,                 -- 32-bit input: FIFO data input bus
+                                                    DINP => (others => '0'));              -- 4-bit input: FIFO parity input bus
     
     
     read_reg_proc: process(S_AXI_ACLK) is

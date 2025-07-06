@@ -5,13 +5,14 @@ use ieee.math_real.all;
 
 entity axi_testbench is
     generic(C_AXI_DATA_WIDTH: integer range 32 to 128 := 32;
-            C_NUM_REGISTERS: integer range 1 to 1024 := 10);
+            C_AXI_ADDRESS_WIDTH: integer range 4 to 128 := 5;
+            C_NUM_REGISTERS: integer range 1 to 1024 := 6);
 end axi_testbench;
 
 architecture behavioral of axi_testbench is
     signal S_AXI_ACLK: std_logic := '0';
     signal S_AXI_ARESETN: std_logic := '0';
-    signal S_AXI_AWADDR: std_logic_vector(integer(ceil(log2(real(C_NUM_REGISTERS)))) + 1 downto 0) := (others => '0');
+    signal S_AXI_AWADDR: std_logic_vector(C_AXI_ADDRESS_WIDTH - 1 downto 0) := (others => '0');
     signal S_AXI_AWPROT: std_logic_vector(2 downto 0) := (others => '0');
     signal S_AXI_AWVALID: std_logic := '0';
     signal S_AXI_AWREADY: std_logic := '0';
@@ -22,7 +23,7 @@ architecture behavioral of axi_testbench is
     signal S_AXI_BRESP: std_logic_vector(1 downto 0) := (others => '0');
     signal S_AXI_BVALID: std_logic := '0';
     signal S_AXI_BREADY: std_logic := '0';
-    signal S_AXI_ARADDR: std_logic_vector(integer(ceil(log2(real(C_NUM_REGISTERS)))) + 1 downto 0) := (others => '0');
+    signal S_AXI_ARADDR: std_logic_vector(C_AXI_ADDRESS_WIDTH - 1 downto 0) := (others => '0');
     signal S_AXI_ARPROT: std_logic_vector(2 downto 0) := (others => '0');
     signal S_AXI_ARVALID: std_logic := '0';
     signal S_AXI_ARREADY: std_logic := '0';
@@ -35,7 +36,7 @@ begin
     S_AXI_ARESETN <= '1' after 1 us;
 
     MUT: entity work.AXI_FIFO generic map(C_AXI_DATA_WIDTH => C_AXI_DATA_WIDTH,
-                                          C_NUM_REGISTERS => C_NUM_REGISTERS)
+                                          C_AXI_ADDRESS_WIDTH => C_AXI_ADDRESS_WIDTH)
                               port map(S_AXI_ACLK => S_AXI_ACLK,
                                        S_AXI_ARESETN => S_AXI_ARESETN,
                                        S_AXI_AWADDR => S_AXI_AWADDR,
@@ -153,8 +154,8 @@ begin
                      '0' after 1.116 us;
     -- S_AXI_AWADDR <= "0000101100" after 1.100 us,
     --                 "0000000000" after 1.116 us;
-    S_AXI_AWADDR <= "100000" after 1.100 us,
-                    "000000" after 1.116 us;
+    S_AXI_AWADDR <= "01100" after 1.100 us,
+                    "00000" after 1.116 us;
     S_AXI_WSTRB <= "1111"; -- after 1.110 us,
                    --"0000" after 1.120 us;
     S_AXI_WDATA <= X"BADBABE5" after 1.116 us,
@@ -167,8 +168,8 @@ begin
                      '0' after 1.220 us;
     -- S_AXI_ARADDR <= "0000101100" after 1.204 us,
     --                 "0000000000" after 1.220 us;
-    S_AXI_ARADDR <= "100000" after 1.204 us,
-                    "000000" after 1.220 us;
+    S_AXI_ARADDR <= "01100" after 1.204 us,
+                    "00000" after 1.220 us;
     S_AXI_RREADY <= '1' after 1.228 us,
                     '0' after 1.236 us;
 

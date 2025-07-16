@@ -151,26 +151,58 @@ begin
 
 
     S_AXI_AWVALID <= '1' after 1.100 us,
-                     '0' after 1.116 us;
+                     '0' after 1.116 us,
+                     '1' after 1.156 us,
+                     '0' after 1.172 us,
+                     '1' after 1.220 us,
+                     '0' after 1.236 us;
     -- S_AXI_AWADDR <= "0000101100" after 1.100 us,
     --                 "0000000000" after 1.116 us;
-    S_AXI_AWADDR <= "01100" after 1.100 us,
-                    "00000" after 1.116 us;
+    S_AXI_AWADDR <= "10000" after 1.100 us,
+                    "00000" after 1.116 us,
+                    "01100" after 1.156 us,
+                    "00000" after 1.172 us;
     S_AXI_WSTRB <= "1111"; -- after 1.110 us,
                    --"0000" after 1.120 us;
     S_AXI_WDATA <= X"BADBABE5" after 1.116 us,
-                   X"00000000" after 1.132 us;
+                   X"00000000" after 1.132 us,
+                   X"00000001" after 1.172 us,
+                   X"00000000" after 1.188 us,
+                   X"00000001" after 1.236 us,
+                   X"00000000" after 1.252 us;
     S_AXI_WVALID <= '1' after 1.116 us,
-                    '0' after 1.132 us;
+                    '0' after 1.132 us,
+                    '1' after 1.172 us,
+                    '0' after 1.188 us,
+                    '1' after 1.236 us,
+                    '0' after 1.252 us;
     S_AXI_BREADY <= '1' after 1.140 us,
-                    '0' after 1.148 us;
-    S_AXI_ARVALID <= '1' after 1.204 us,
-                     '0' after 1.220 us;
-    -- S_AXI_ARADDR <= "0000101100" after 1.204 us,
-    --                 "0000000000" after 1.220 us;
-    S_AXI_ARADDR <= "01100" after 1.204 us,
-                    "00000" after 1.220 us;
-    S_AXI_RREADY <= '1' after 1.228 us,
-                    '0' after 1.236 us;
+                    '0' after 1.148 us,
+                    '1' after 1.196 us,
+                    '0' after 1.204 us,
+                    '1' after 1.260 us,
+                    '0' after 1.268 us;
+
+    S_AXI_ARVALID <= '1' after 1.300 us,
+                     '0' after 1.316 us;
+    S_AXI_ARADDR <= "00000" after 1.300 us,
+                    "00000" after 1.316 us;
+    S_AXI_RREADY <= '1' after 1.316 us,
+                    '0' after 1.324 us;
+
+    -- S_AXI_ARVALID <= '1' after 1.220 us,
+    --                  '0' after 1.236 us,
+    --                  '1' after 1.260 us,
+    --                  '0' after 1.276 us;
+    -- -- S_AXI_ARADDR <= "0000101100" after 1.204 us,
+    -- --                 "0000000000" after 1.220 us;
+    -- S_AXI_ARADDR <= "00000" after 1.220 us,
+    --                 "00000" after 1.236 us,
+    --                 "00000" after 1.260 us,
+    --                 "00000" after 1.276 us;
+    -- S_AXI_RREADY <= '1' after 1.244 us,
+    --                 '0' after 1.252 us,
+    --                 '1' after 1.284 us,
+    --                 '0' after 1.292 us;
 
 end behavioral;

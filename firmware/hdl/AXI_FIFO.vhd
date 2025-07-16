@@ -34,12 +34,12 @@ entity AXI_FIFO is
 end AXI_FIFO;
 
 architecture synth_logic of AXI_FIFO is
-    constant C_NUM_REGISTERS: integer range 1 to 1024 := 5;
-    constant READ_CONTROL_REGISTER: integer := 0;
-    constant READ_DATA_REGISTER: integer := 1; 
-    constant WRITE_CONTROL_REGISTER: integer := 2;
-    constant WRITE_DATA_REGISTER: integer := 3;
-    constant FIFO_STATUS_REGISTER: integer := 4;
+    constant C_NUM_REGISTERS: integer range 1 to 1024 := 6;
+    constant READ_CONTROL_REGISTER: integer := 1;
+    constant READ_DATA_REGISTER: integer := 2; 
+    constant WRITE_CONTROL_REGISTER: integer := 3;
+    constant WRITE_DATA_REGISTER: integer := 4;
+    constant FIFO_STATUS_REGISTER: integer := 5;
 
     component axi4_lite_slave_if is
         generic(C_AXI_DATA_WIDTH: integer range 32 to 128;

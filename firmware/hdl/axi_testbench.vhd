@@ -5,7 +5,7 @@ use ieee.math_real.all;
 
 entity axi_testbench is
     generic(C_AXI_DATA_WIDTH: integer range 32 to 128 := 32;
-            C_AXI_ADDRESS_WIDTH: integer range 4 to 128 := 5;
+            C_AXI_ADDRESS_WIDTH: integer range 4 to 128 := 4;
             C_NUM_REGISTERS: integer range 1 to 1024 := 6);
 end axi_testbench;
 
@@ -158,10 +158,10 @@ begin
                      '0' after 1.236 us;
     -- S_AXI_AWADDR <= "0000101100" after 1.100 us,
     --                 "0000000000" after 1.116 us;
-    S_AXI_AWADDR <= "10000" after 1.100 us,
-                    "00000" after 1.116 us,
-                    "01100" after 1.156 us,
-                    "00000" after 1.172 us;
+    S_AXI_AWADDR <= "0100" after 1.100 us,
+                    "0000" after 1.116 us,
+                    "1000" after 1.156 us,
+                    "0000" after 1.172 us;
     S_AXI_WSTRB <= "1111"; -- after 1.110 us,
                    --"0000" after 1.120 us;
     S_AXI_WDATA <= X"BADBABE5" after 1.116 us,
@@ -185,8 +185,8 @@ begin
 
     S_AXI_ARVALID <= '1' after 1.300 us,
                      '0' after 1.316 us;
-    S_AXI_ARADDR <= "00000" after 1.300 us,
-                    "00000" after 1.316 us;
+    S_AXI_ARADDR <= "0000" after 1.300 us,
+                    "0000" after 1.316 us;
     S_AXI_RREADY <= '1' after 1.316 us,
                     '0' after 1.324 us;
 

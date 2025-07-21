@@ -83,10 +83,10 @@ architecture synth_logic of AXI_FIFO is
     signal reg_check: register_defs := (FIFO_STATUS_REGISTER => READ_ONLY, 
                                         READ_DATA_REGISTER => READ_ONLY,
                                         others => READ_WRITE);
-    -- signal registers: slv_array := (others => (others => '0')); -- := (2 => (31 downto 8 => '0', others => 'U'), others => (others => '0'));
-    signal write_register: std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0);
-    signal read_register: std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0);
-    signal status_register: std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0);
+    signal registers: slv_array := (others => (others => '0')); -- := (2 => (31 downto 8 => '0', others => 'U'), others => (others => '0'));
+    --signal write_register: std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0);
+    --signal read_register: std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0);
+    --signal status_register: std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0);
     signal reg_write: std_logic_vector(C_NUM_REGISTERS - 1 downto 0) := (others => '0');
     signal reg_read: std_logic_vector(C_NUM_REGISTERS - 1 downto 0) := (others => '0');
     signal strobe_read: std_logic := '0';
@@ -169,49 +169,60 @@ begin
     --     end if;
     -- end process cntrl_edge_detect;
 
-    read_request_process: process(S_AXI_ACLK) is
-    begin
-        if(rising_edge(S_AXI_ACLK)) then
-            if(strobe_read = '1' and reg_read(READ_DATA_REGISTER) = '1') then
-                read_request <= '1';
-            else
-                read_request <= '0';
-            end if;
-        end if;
-    end process read_request_process;
+    with reg_read(READ_DATA_REGISTER) select
+        read_enable <= '1' when '1',
+                       '0' when others;
 
-    read_enable_process: process(S_AXI_ACLK) is
-    begin
-        if(falling_edge(S_AXI_ACLK)) then
-            if(read_request = '1') then
-                read_enable <= '1';
-            else
-                read_enable <= '0';
-            end if;
-        end if;
-    end process read_enable_process;
+    with reg_write(WRITE_DATA_REGISTER) select
+        write_enable <= '1' when '1',
+                        '0' when others;
 
-    write_request_process: process(S_AXI_ACLK) is
-    begin
-        if(rising_edge(S_AXI_ACLK)) then
-            if(strobe_write = '1' and reg_write(WRITE_DATA_REGISTER) = '1') then
-                write_request <= '1';
-            else
-                write_request <= '0';
-            end if;
-        end if;
-    end process write_request_process;
+    -- read_request_process: process(S_AXI_ACLK) is
+    -- begin
+    --     if(falling_edge(S_AXI_ACLK)) then
+    --         -- if(strobe_read = '1' and reg_read(READ_DATA_REGISTER) = '1') then
+    --         if(reg_read(READ_DATA_REGISTER) = '1') then
+    --             read_enable <= '1';
+    --             -- read_request <= '1';
+    --         else
+    --             read_enable <= '0';
+    --             -- read_request <= '0';
+    --         end if;
+    --     end if;
+    -- end process read_request_process;
 
-    write_enable_process: process(S_AXI_ACLK) is
-    begin
-        if(falling_edge(S_AXI_ACLK)) then
-            if(write_request = '1') then
-                write_enable <= '1';
-            else
-                write_enable <= '0';
-            end if;
-        end if;
-    end process write_enable_process;
+    -- read_enable_process: process(S_AXI_ACLK) is
+    -- begin
+    --     if(falling_edge(S_AXI_ACLK)) then
+    --         if(read_request = '1') then
+    --             read_enable <= '1';
+    --         else
+    --             read_enable <= '0';
+    --         end if;
+    --     end if;
+    -- end process read_enable_process;
+
+    -- write_request_process: process(S_AXI_ACLK) is
+    -- begin
+    --     if(rising_edge(S_AXI_ACLK)) then
+    --         if(strobe_write = '1' and reg_write(WRITE_DATA_REGISTER) = '1') then
+    --             write_request <= '1';
+    --         else
+    --             write_request <= '0';
+    --         end if;
+    --     end if;
+    -- end process write_request_process;
+
+    -- write_enable_process: process(S_AXI_ACLK) is
+    -- begin
+    --     if(falling_edge(S_AXI_ACLK)) then
+    --         if(write_request = '1') then
+    --             write_enable <= '1';
+    --         else
+    --             write_enable <= '0';
+    --         end if;
+    --     end if;
+    -- end process write_enable_process;
 
     -- FIFO_BLOCK: block 
         -- signal read_en_wire: std_logic := '0';
@@ -306,17 +317,24 @@ begin
                 strobe_write <= '0';
             else
                 strobe_write <= or_reduce(reg_write);
-                for idx in reg_write'range loop
-                    if(reg_write(idx) = '1' and strobe_write = '0') then
-                        if(reg_check(idx) = CNTRL_REG) then
-                            for byte_index in 0 to ((C_AXI_DATA_WIDTH / 8) - 1) loop
-                                if(S_AXI_WSTRB(byte_index) = '1') then
-                                    registers(idx)(byte_index * 8 + 7 downto byte_index * 8) <= S_AXI_WDATA(byte_index * 8 + 7 downto byte_index * 8);
-                                end if;
-                            end loop;
+                if(reg_write(WRITE_DATA_REGISTER) = '1' and strobe_write = '0') then
+                    for byte_index in 0 to ((C_AXI_DATA_WIDTH / 8) - 1) loop
+                        if(S_AXI_WSTRB(byte_index) = '1') then
+                            registers(WRITE_DATA_REGISTER)(byte_index * 8 + 7 downto byte_index * 8) <= S_AXI_WDATA(byte_index * 8 + 7 downto byte_index * 8);
                         end if;
-                    end if;
-                end loop;
+                    end loop;
+                end if;
+                -- for idx in reg_write'range loop
+                --     if(reg_write(idx) = '1' and strobe_write = '0') then
+                --         if(reg_check(idx) = CNTRL_REG) then
+                --             for byte_index in 0 to ((C_AXI_DATA_WIDTH / 8) - 1) loop
+                --                 if(S_AXI_WSTRB(byte_index) = '1') then
+                --                     registers(idx)(byte_index * 8 + 7 downto byte_index * 8) <= S_AXI_WDATA(byte_index * 8 + 7 downto byte_index * 8);
+                --                 end if;
+                --             end loop;
+                --         end if;
+                --     end if;
+                -- end loop;
             end if;
         end if;
     end process write_reg_proc;

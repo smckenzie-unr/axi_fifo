@@ -169,27 +169,27 @@ begin
     --     end if;
     -- end process cntrl_edge_detect;
 
-    with reg_read(READ_DATA_REGISTER) select
-        read_enable <= '1' when '1',
-                       '0' when others;
+    -- with reg_read(READ_DATA_REGISTER) select
+    --     read_enable <= '1' when '1',
+    --                    '0' when others;
 
-    with reg_write(WRITE_DATA_REGISTER) select
-        write_enable <= '1' when '1',
-                        '0' when others;
+    -- with reg_write(WRITE_DATA_REGISTER) select
+    --     write_enable <= '1' when '1',
+    --                     '0' when others;
 
-    -- read_request_process: process(S_AXI_ACLK) is
-    -- begin
-    --     if(falling_edge(S_AXI_ACLK)) then
-    --         -- if(strobe_read = '1' and reg_read(READ_DATA_REGISTER) = '1') then
-    --         if(reg_read(READ_DATA_REGISTER) = '1') then
-    --             read_enable <= '1';
-    --             -- read_request <= '1';
-    --         else
-    --             read_enable <= '0';
-    --             -- read_request <= '0';
-    --         end if;
-    --     end if;
-    -- end process read_request_process;
+    read_request_process: process(S_AXI_ACLK) is
+    begin
+        if(falling_edge(S_AXI_ACLK)) then
+            -- if(strobe_read = '1' and reg_read(READ_DATA_REGISTER) = '1') then
+            if(reg_read(READ_DATA_REGISTER) = '1') then
+                read_enable <= '1';
+                -- read_request <= '1';
+            else
+                read_enable <= '0';
+                -- read_request <= '0';
+            end if;
+        end if;
+    end process read_request_process;
 
     -- read_enable_process: process(S_AXI_ACLK) is
     -- begin
@@ -202,27 +202,27 @@ begin
     --     end if;
     -- end process read_enable_process;
 
-    -- write_request_process: process(S_AXI_ACLK) is
-    -- begin
-    --     if(rising_edge(S_AXI_ACLK)) then
-    --         if(strobe_write = '1' and reg_write(WRITE_DATA_REGISTER) = '1') then
-    --             write_request <= '1';
-    --         else
-    --             write_request <= '0';
-    --         end if;
-    --     end if;
-    -- end process write_request_process;
+    write_request_process: process(S_AXI_ACLK) is
+    begin
+        if(rising_edge(S_AXI_ACLK)) then
+            if(strobe_write = '1' and reg_write(WRITE_DATA_REGISTER) = '1') then
+                write_request <= '1';
+            else
+                write_request <= '0';
+            end if;
+        end if;
+    end process write_request_process;
 
-    -- write_enable_process: process(S_AXI_ACLK) is
-    -- begin
-    --     if(falling_edge(S_AXI_ACLK)) then
-    --         if(write_request = '1') then
-    --             write_enable <= '1';
-    --         else
-    --             write_enable <= '0';
-    --         end if;
-    --     end if;
-    -- end process write_enable_process;
+    write_enable_process: process(S_AXI_ACLK) is
+    begin
+        if(falling_edge(S_AXI_ACLK)) then
+            if(write_request = '1') then
+                write_enable <= '1';
+            else
+                write_enable <= '0';
+            end if;
+        end if;
+    end process write_enable_process;
 
     -- FIFO_BLOCK: block 
         -- signal read_en_wire: std_logic := '0';
@@ -293,23 +293,29 @@ begin
                                         DINP => (others => '0'));               -- 4-bit input: FIFO parity input bus
     -- end block FIFO_BLOCK;    
     
-    read_reg_proc: process(S_AXI_ACLK) is
-    begin
-        if(rising_edge(S_AXI_ACLK)) then
-            if(S_AXI_ARESETN = '0') then
-                strobe_read <= '0';
-                axi_rdata <= (others => '0');
-            else
-                strobe_read <= or_reduce(reg_read);
-                for idx in reg_read'range loop
-                    if(reg_read(idx) = '1' and strobe_read = '0') then
-                        axi_rdata <= registers(idx);
-                    end if;
-                end loop;
-            end if;
-        end if;
-    end process read_reg_proc;
+    -- read_reg_proc: process(S_AXI_ACLK) is
+    -- begin
+    --     if(rising_edge(S_AXI_ACLK)) then
+    --         if(S_AXI_ARESETN = '0') then
+    --             strobe_read <= '0';
+    --             axi_rdata <= (others => '0');
+    --         else
+    --             strobe_read <= or_reduce(reg_read);
+    --             for idx in reg_read'range loop
+    --                 if(reg_read(idx) = '1' and strobe_read = '0') then
+    --                     axi_rdata <= registers(idx);
+    --                 end if;
+    --             end loop;
+    --         end if;
+    --     end if;
+    -- end process read_reg_proc;
 
+    with reg_read select
+        axi_rdata <= read_data_reg when "001",
+                     write_data_reg when "010",
+                     fifo_status_reg when "100",
+                     (others => '0') when others;
+                  
     write_reg_proc: process(S_AXI_ACLK) is
     begin
         if(rising_edge(S_AXI_ACLK)) then
@@ -339,9 +345,3 @@ begin
         end if;
     end process write_reg_proc;
 end synth_logic;
-
-
-
-
---https://copilot.microsoft.com/shares/xD43hsB6A46UHDVTm14Yf
-

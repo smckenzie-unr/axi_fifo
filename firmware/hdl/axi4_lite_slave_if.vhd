@@ -63,8 +63,7 @@ begin
     S_AXI_WREADY <= axi_wready;
     S_AXI_BVALID <= axi_bvalid;
     S_AXI_BRESP <= axi_bresp;
-
-    with S_AXI_WVALID select REGISTER_WR <= write_reg when '1', (others => '0') when others;
+    REGISTER_WR <= write_reg;
                        
     read_process: process(S_AXI_ACLK) is
         variable read_address: unsigned(integer(ceil(log2(real(C_NUM_REGISTERS)))) - 1 downto 0) := (others => '0');

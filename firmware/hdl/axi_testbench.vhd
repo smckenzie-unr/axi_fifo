@@ -183,11 +183,17 @@ begin
                     -- '1' after 1.260 us,
                     -- '0' after 1.268 us;
 
-    S_AXI_ARVALID <= '1' after 1.300 us,
+    S_AXI_ARVALID <= '1' after 1.180 us,
+                     '0' after 1.196 us,
+                     '1' after 1.300 us,
                      '0' after 1.316 us;
-    S_AXI_ARADDR <= "0000" after 1.300 us,
+    S_AXI_ARADDR <= "1000" after 1.180 us,
+                    "0000" after 1.196 us,                
+                    "0000" after 1.300 us,
                     "0000" after 1.316 us;
-    S_AXI_RREADY <= '1' after 1.324 us,
+    S_AXI_RREADY <= '1' after 1.204 us,
+                    '0' after 1.212 us,
+                    '1' after 1.324 us,
                     '0' after 1.332 us;
 
     -- S_AXI_ARVALID <= '1' after 1.220 us,

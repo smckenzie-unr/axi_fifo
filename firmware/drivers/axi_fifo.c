@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * AXI FIFO Character Device Driver
+ * Copyright (C) 2025 Scott L. McKenzie
+ */
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -10,6 +16,7 @@
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
+#include <linux/string.h>
 
 #define DEVICE_NAME "axi_fifo"
 #define CLASS_NAME "axi_fifo_class"
@@ -28,6 +35,7 @@ struct axi_fifo_dev {
     struct device *device;
     void __iomem *base_addr;
     struct platform_device *pdev;
+    char read_command[32];
 };
 
 static struct axi_fifo_dev axi_fifo_device;
@@ -55,24 +63,10 @@ static ssize_t axi_fifo_read(struct file *file, char __user *buffer, size_t leng
         return 0; // EOF
     }
 
-    // Check if "status" command was issued
-    if (strcmp(axi_fifo_device.read_command, "status") == 0) 
-    {
-        // Read status register
-        reg_data = ioread32(axi_fifo_device.base_addr + STATUS_REG_OFFSET);
-        bytes_to_copy = snprintf(kernel_buffer, sizeof(kernel_buffer), "STATUS: 0x%08X\n", reg_data);
-        printk(KERN_INFO "AXI FIFO: Read STATUS register: 0x%08X\n", reg_data);
-        
-        // Clear the command after use
-        strcpy(axi_fifo_device.read_command, "");
-    } 
-    else 
-    {
-        // Default: Read data register
-        reg_data = ioread32(axi_fifo_device.base_addr + READ_DATA_REG_OFFSET);
-        bytes_to_copy = snprintf(kernel_buffer, sizeof(kernel_buffer), "READ_DATA: 0x%08X\n", reg_data);
-        printk(KERN_INFO "AXI FIFO: Read DATA register: 0x%08X\n", reg_data);
-    }
+    // Read data register
+    reg_data = ioread32(axi_fifo_device.base_addr + READ_DATA_REG_OFFSET);
+    bytes_to_copy = snprintf(kernel_buffer, sizeof(kernel_buffer), "READ_DATA: 0x%08X\n", reg_data);
+    printk(KERN_INFO "AXI FIFO: Read DATA register: 0x%08X\n", reg_data);
 
     if (length < bytes_to_copy)
     {
@@ -116,6 +110,13 @@ static ssize_t axi_fifo_write(struct file *file, const char __user *buffer, size
         return -EINVAL;
     }
 
+    // Check if hardware is available (probe was called)
+    if (!axi_fifo_device.base_addr) 
+    {
+        printk(KERN_ERR "AXI FIFO: Hardware not available - device tree entry missing\n");
+        return -ENODEV;
+    }
+
     // Write to the write data register
     iowrite32(write_data, axi_fifo_device.base_addr + WRITE_DATA_REG_OFFSET);
 
@@ -141,7 +142,6 @@ MODULE_DEVICE_TABLE(of, axi_fifo_of_match);
 static int axi_fifo_probe(struct platform_device *pdev)
 {
     struct resource *res;
-    int ret;
 
     printk(KERN_INFO "AXI FIFO: Probing device\n");
 
@@ -189,6 +189,9 @@ static int __init axi_fifo_init(void)
 
     printk(KERN_INFO "AXI FIFO: Initializing driver\n");
 
+    // Initialize read_command field
+    strcpy(axi_fifo_device.read_command, "");
+
     // Allocate device number
     ret = alloc_chrdev_region(&axi_fifo_device.dev_num, 0, 1, DEVICE_NAME);
     if (ret < 0)
@@ -210,7 +213,7 @@ static int __init axi_fifo_init(void)
     }
 
     // Create device class
-    axi_fifo_device.class = class_create(THIS_MODULE, CLASS_NAME);
+    axi_fifo_device.class = class_create(CLASS_NAME);
     if (IS_ERR(axi_fifo_device.class)) 
     {
         printk(KERN_ERR "AXI FIFO: Failed to create device class\n");
@@ -235,9 +238,27 @@ static int __init axi_fifo_init(void)
         goto cleanup_device;
     }
 
+    // Fallback: If no device tree entry, manually map the memory
+    if (!axi_fifo_device.base_addr) 
+    {
+        printk(KERN_WARNING "AXI FIFO: No device tree entry found, using manual mapping\n");
+        axi_fifo_device.base_addr = ioremap(AXI_FIFO_BASE_ADDR, AXI_FIFO_SIZE);
+        if (!axi_fifo_device.base_addr) 
+        {
+            printk(KERN_ERR "AXI FIFO: Failed to manually map memory\n");
+            ret = -ENOMEM;
+            goto cleanup_platform;
+        }
+        printk(KERN_INFO "AXI FIFO: Manually mapped memory at 0x%px (physical: 0x%08X)\n", 
+               axi_fifo_device.base_addr, AXI_FIFO_BASE_ADDR);
+    }
+
     printk(KERN_INFO "AXI FIFO: Driver initialized successfully\n");
     printk(KERN_INFO "AXI FIFO: Device created at /dev/%s\n", DEVICE_NAME);
     return 0;
+
+cleanup_platform:
+    platform_driver_unregister(&axi_fifo_driver);
 
 cleanup_device:
     device_destroy(axi_fifo_device.class, axi_fifo_device.dev_num);
@@ -253,6 +274,13 @@ cleanup_chrdev:
 static void __exit axi_fifo_exit(void)
 {
     printk(KERN_INFO "AXI FIFO: Exiting driver\n");
+
+    // Unmap memory if manually mapped
+    if (axi_fifo_device.base_addr && !axi_fifo_device.pdev) 
+    {
+        iounmap(axi_fifo_device.base_addr);
+        printk(KERN_INFO "AXI FIFO: Unmapped manually mapped memory\n");
+    }
 
     platform_driver_unregister(&axi_fifo_driver);
     device_destroy(axi_fifo_device.class, axi_fifo_device.dev_num);

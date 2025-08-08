@@ -94,6 +94,7 @@ architecture synth_logic of AXI_FIFO is
     signal read_enable: std_logic := '0';
     signal write_enable: std_logic := '0';
 
+    signal fifo_read_strobe: std_logic := '0';
     signal axi_awready_wire: std_logic := '0';
 
     signal fifo_full_wire: std_logic;
@@ -150,11 +151,12 @@ begin
     read_request_process: process(S_AXI_ACLK) is
     begin
         if(falling_edge(S_AXI_ACLK)) then
-            if(reg_read(READ_DATA_REGISTER) = '1' and axi_rvalid_wire = '1') then
+            if(reg_read(READ_DATA_REGISTER) = '1' and fifo_read_strobe = '0') then
                 read_enable <= '1';
             else
                 read_enable <= '0';
             end if;
+            fifo_read_strobe <= reg_read(READ_DATA_REGISTER);
         end if;
     end process read_request_process;
 

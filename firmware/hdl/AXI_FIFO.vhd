@@ -94,6 +94,8 @@ architecture synth_logic of AXI_FIFO is
     signal read_enable: std_logic := '0';
     signal write_enable: std_logic := '0';
 
+    signal fifo_read_strobe: std_logic := '0';
+    signal axi_awready_wire: std_logic := '0';
 
     signal fifo_full_wire: std_logic;
     signal fifo_empty_wire: std_logic;
@@ -109,6 +111,7 @@ architecture synth_logic of AXI_FIFO is
     alias fifo_status_reg: std_logic_vector(C_AXI_DATA_WIDTH - 1 downto 0) is registers(FIFO_STATUS_REGISTER);
 begin
 
+    S_AXI_WREADY <= axi_awready_wire;
     S_AXI_RDATA <= axi_rdata;
     fifo_reset <= not S_AXI_ARESETN;
 
@@ -131,7 +134,7 @@ begin
                                                S_AXI_AWVALID => S_AXI_AWVALID,
                                                S_AXI_AWREADY => S_AXI_AWREADY,
                                                S_AXI_WVALID => S_AXI_WVALID,
-                                               S_AXI_WREADY => S_AXI_WREADY,
+                                               S_AXI_WREADY => axi_awready_wire,
                                                S_AXI_BRESP => S_AXI_BRESP,
                                                S_AXI_BVALID => S_AXI_BVALID,
                                                S_AXI_BREADY => S_AXI_BREADY,
@@ -148,21 +151,28 @@ begin
     read_request_process: process(S_AXI_ACLK) is
     begin
         if(falling_edge(S_AXI_ACLK)) then
-            if(reg_read(READ_DATA_REGISTER) = '1') then
+            if(reg_read(READ_DATA_REGISTER) = '1' and fifo_read_strobe = '0') then
                 read_enable <= '1';
             else
                 read_enable <= '0';
             end if;
+            fifo_read_strobe <= reg_read(READ_DATA_REGISTER);
         end if;
     end process read_request_process;
 
     write_enable_process: process(S_AXI_ACLK) is
     begin
-        if(falling_edge(S_AXI_ACLK)) then
-            if(S_AXI_WVALID = '1') then
-                write_enable <= '1';
-            else
+        if(rising_edge(S_AXI_ACLK)) then
+            if(S_AXI_ARESETN = '0') then
                 write_enable <= '0';
+            else
+                -- Generate write enable when AXI write transaction completes
+                -- Use WREADY (not AWREADY) for write data handshake
+                if(reg_write(WRITE_DATA_REGISTER) = '1' and S_AXI_WVALID = '1' and axi_awready_wire = '1') then
+                    write_enable <= '1';
+                else
+                    write_enable <= '0';
+                end if;
             end if;
         end if;
     end process write_enable_process;
